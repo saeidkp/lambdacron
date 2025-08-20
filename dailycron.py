@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import logging
 import time
 
+import os
 # Configure logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -16,10 +17,16 @@ def lambda_handler(event, context):
     - Reverts SQL back to 60-day rolling window
     """
     
-    # Initialize AWS clients
-    quicksight = boto3.client('quicksight', region_name='us-east-1')
-    AWS_ACCOUNT_ID = context.invoked_function_arn.split(':')[4]
+    # Check if running in Lambda vs locally
+    if context and hasattr(context, 'invoked_function_arn'):
+        # Running in Lambda
+        AWS_ACCOUNT_ID = context.invoked_function_arn.split(':')[4]
+    else:
+        # Running locally - use STS
+        sts = boto3.client('sts')
+        AWS_ACCOUNT_ID = sts.get_caller_identity()['Account']
     
+    print(f"Account ID: {AWS_ACCOUNT_ID}")
     # Your 13 datasets - each with its own rolling window
     DATASETS = [
         {
